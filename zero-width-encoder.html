@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-Width String Encoder</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0f11;
+    --surface: #161719;
+    --surface2: #1e2023;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --teal: #1dc9a0;
+    --teal-dim: rgba(29,201,160,0.12);
+    --teal-glow: rgba(29,201,160,0.25);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.1);
+    --text: #e8eae8;
+    --text-muted: #7a8080;
+    --text-dim: #4a5050;
+    --red: #e26060;
+    --red-dim: rgba(226,96,96,0.1);
+    --mono: 'Space Mono', monospace;
+    --sans: 'Sora', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .app { max-width: 760px; margin: 0 auto; }
+
+  /* Language toggle */
+  .lang-toggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 100;
+  }
+
+  .lang-btn {
+    padding: 5px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+  }
+
+  .lang-btn.active {
+    background: var(--teal-dim);
+    color: var(--teal);
+  }
+
+  .lang-divider {
+    width: 1px;
+    background: var(--border2);
+    align-self: stretch;
+  }
+
+  header {
+    margin-bottom: 2.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--teal-dim);
+    border: 1px solid var(--teal);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+
+  .logo-icon svg { width: 20px; height: 20px; }
+
+  header h1 {
+    font-family: var(--sans); font-size: 22px; font-weight: 600;
+    color: var(--text); letter-spacing: -0.3px;
+  }
+
+  header p { font-size: 13px; color: var(--text-muted); margin-top: 2px; font-weight: 300; }
+
+  .tabs {
+    display: flex; gap: 2px; margin-bottom: 1.5rem;
+    background: var(--surface); border-radius: 10px;
+    padding: 4px; border: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1; padding: 8px 16px; border-radius: 7px; border: none;
+    cursor: pointer; font-family: var(--sans); font-size: 13px;
+    font-weight: 400; color: var(--text-muted); background: transparent;
+    transition: all 0.18s; letter-spacing: 0.1px;
+  }
+
+  .tab.active { background: var(--surface2); color: var(--teal); border: 1px solid var(--border2); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;
+  }
+
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.6rem;
+  }
+
+  textarea, input[type="text"], input[type="number"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--mono);
+    font-size: 13px; padding: 10px 12px; outline: none;
+    transition: border-color 0.15s; resize: vertical; line-height: 1.6;
+  }
+
+  textarea:focus, input[type="text"]:focus, input[type="number"]:focus { border-color: var(--teal); }
+  textarea { min-height: 70px; }
+
+  .position-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0.75rem; }
+
+  .pos-btn {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); font-family: var(--sans);
+    font-size: 12px; cursor: pointer; transition: all 0.15s;
+  }
+
+  .pos-btn.active { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+
+  .pos-custom { display: flex; align-items: center; gap: 6px; }
+  .pos-custom input { width: 70px; padding: 5px 8px; font-size: 12px; min-height: unset; }
+
+  .encode-btn {
+    width: 100%; padding: 12px; border-radius: 10px;
+    border: 1px solid var(--teal); background: var(--teal-dim);
+    color: var(--teal); font-family: var(--sans); font-size: 14px;
+    font-weight: 600; cursor: pointer; transition: all 0.18s;
+    letter-spacing: 0.2px; margin-bottom: 1rem;
+  }
+
+  .encode-btn:hover { background: var(--teal-glow); }
+  .encode-btn:active { transform: scale(0.99); }
+
+  .result-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  .result-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+  }
+
+  .result-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); }
+  .result-actions { display: flex; gap: 6px; }
+
+  .action-btn {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border2);
+    background: transparent; color: var(--text-muted); font-family: var(--sans);
+    font-size: 12px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .action-btn:hover { color: var(--teal); border-color: var(--teal); background: var(--teal-dim); }
+  .action-btn.copied { color: var(--teal); border-color: var(--teal); background: var(--teal-dim); }
+
+  .result-body { padding: 14px; font-family: var(--mono); font-size: 13px; line-height: 1.8; min-height: 60px; word-break: break-all; }
+
+  .result-body.empty {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim); font-family: var(--sans); font-size: 13px; min-height: 80px;
+  }
+
+  .zw-marker {
+    display: inline-block; background: var(--teal-dim); border: 1px solid var(--teal);
+    border-radius: 4px; padding: 1px 5px; font-size: 10px; font-family: var(--sans);
+    color: var(--teal); vertical-align: middle; cursor: help;
+  }
+
+  .stats-row { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
+  .stat { font-size: 11px; color: var(--text-dim); }
+  .stat span { color: var(--text-muted); font-family: var(--mono); font-size: 11px; }
+
+  .info-banner {
+    display: flex; gap: 8px; padding: 10px 14px;
+    background: var(--amber-dim); border: 1px solid rgba(245,166,35,0.2);
+    border-radius: 8px; margin-top: 0.75rem; font-size: 12px;
+    color: var(--text-muted); line-height: 1.5;
+  }
+
+  .info-banner .info-icon { color: var(--amber); flex-shrink: 0; font-size: 14px; }
+
+  .decode-result {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; font-family: var(--mono);
+    font-size: 13px; margin-top: 10px; min-height: 50px;
+    word-break: break-all; line-height: 1.7;
+  }
+
+  .decode-result.found { border-color: var(--teal); background: var(--teal-dim); color: var(--teal); }
+  .decode-result.not-found {
+    border-color: var(--border); color: var(--text-dim); font-family: var(--sans);
+    font-size: 13px; display: flex; align-items: center; justify-content: center;
+  }
+  .decode-result.error { border-color: rgba(226,96,96,0.3); background: var(--red-dim); color: var(--red); }
+
+  .divider { height: 1px; background: var(--border); margin: 1rem 0; }
+
+  .char-map { display: flex; flex-direction: column; gap: 4px; margin-top: 0.75rem; }
+  .char-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .char-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .char-dot.zero { background: #4a5050; }
+  .char-dot.one { background: var(--teal); }
+  .char-dot.sep { background: var(--amber); }
+  .char-code { font-family: var(--mono); color: var(--text-muted); font-size: 11px; }
+  .char-name { color: var(--text-dim); }
+
+  @media (max-width: 480px) { header h1 { font-size: 18px; } }
+</style>
+</head>
+<body>
+
+<!-- Language toggle -->
+<div class="lang-toggle">
+  <button class="lang-btn" id="lang-vi" onclick="setLang('vi')">VI</button>
+  <div class="lang-divider"></div>
+  <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
+</div>
+
+<div class="app">
+  <header>
+    <div class="logo-icon">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 6h14M3 10h8M3 14h5" stroke="#1dc9a0" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="15.5" cy="12.5" r="3.5" stroke="#1dc9a0" stroke-width="1.5"/>
+        <path d="M14.5 12.5h2M15.5 11.5v2" stroke="#1dc9a0" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Zero-Width Encoder</h1>
+      <p data-i18n="subtitle"></p>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('encode')" data-i18n="tab_encode"></button>
+    <button class="tab" onclick="switchTab('decode')" data-i18n="tab_decode"></button>
+    <button class="tab" onclick="switchTab('about')" data-i18n="tab_about"></button>
+  </div>
+
+  <!-- ENCODE PANEL -->
+  <div id="panel-encode" class="panel active">
+    <div class="section">
+      <div class="section-label" data-i18n="label_original"></div>
+      <textarea id="original" data-i18n-placeholder="ph_original">hello</textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-label" data-i18n="label_hidden"></div>
+      <textarea id="hidden" data-i18n-placeholder="ph_hidden">world</textarea>
+      <div class="section-label" style="margin-top:0.75rem;" data-i18n="label_position"></div>
+      <div class="position-row" id="pos-row">
+        <button class="pos-btn active" onclick="setPos('start')" data-i18n="pos_start"></button>
+        <button class="pos-btn" onclick="setPos('end')" data-i18n="pos_end"></button>
+        <button class="pos-btn" onclick="setPos('custom')" data-i18n="pos_custom"></button>
+        <div class="pos-custom" id="pos-custom-input" style="display:none;">
+          <span style="font-size:12px;color:var(--text-muted);" data-i18n="pos_after_char"></span>
+          <input type="number" id="custom-pos" value="0" min="0" placeholder="0" oninput="encode()">
+        </div>
+      </div>
+    </div>
+
+    <button class="encode-btn" onclick="encode()" data-i18n="btn_encode"></button>
+
+    <div class="result-box" id="result-box">
+      <div class="result-header">
+        <div class="result-label" data-i18n="label_result"></div>
+        <div class="result-actions">
+          <button class="action-btn" id="copy-visible-btn" onclick="copyResult('visible')">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5" stroke="currentColor" stroke-width="1.5"/></svg>
+            <span data-i18n="btn_copy"></span>
+          </button>
+          <button class="action-btn" id="copy-raw-btn" onclick="copyResult('raw')">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M8 2l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Raw
+          </button>
+        </div>
+      </div>
+      <div class="result-body empty" id="result-display" data-i18n="result_empty"></div>
+      <div class="stats-row" id="stats-row" style="display:none;">
+        <div class="stat"><span data-i18n="stat_visible"></span>: <span id="stat-visible">0</span></div>
+        <div class="stat" style="margin-left:12px;"><span data-i18n="stat_hidden"></span>: <span id="stat-hidden">0</span></div>
+        <div class="stat" style="margin-left:12px;"><span data-i18n="stat_zw"></span>: <span id="stat-zw">0</span></div>
+      </div>
+    </div>
+
+    <div class="info-banner">
+      <span class="info-icon">⚠</span>
+      <span data-i18n="info_banner"></span>
+    </div>
+  </div>
+
+  <!-- DECODE PANEL -->
+  <div id="panel-decode" class="panel">
+    <div class="section">
+      <div class="section-label" data-i18n="label_paste"></div>
+      <textarea id="decode-input" data-i18n-placeholder="ph_decode" style="min-height:100px;"></textarea>
+    </div>
+    <button class="encode-btn" onclick="decode()" data-i18n="btn_decode"></button>
+
+    <div class="result-box">
+      <div class="result-header">
+        <div class="result-label" data-i18n="label_visible_out"></div>
+        <button class="action-btn" onclick="copyText('decode-visible-out')" data-i18n="btn_copy"></button>
+      </div>
+      <div class="result-body" id="decode-visible-out" style="color:var(--text-muted);min-height:40px;"></div>
+    </div>
+
+    <div style="margin-top:10px;" class="result-box">
+      <div class="result-header">
+        <div class="result-label" data-i18n="label_hidden_out"></div>
+        <button class="action-btn" onclick="copyHiddenText()" data-i18n="btn_copy"></button>
+      </div>
+      <div class="decode-result not-found" id="decode-hidden-out" data-i18n="decode_empty"></div>
+    </div>
+  </div>
+
+  <!-- ABOUT PANEL -->
+  <div id="panel-about" class="panel">
+    <div class="section">
+      <div class="section-label" data-i18n="about_title"></div>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:12px;" data-i18n="about_intro"></p>
+      <div class="char-map">
+        <div class="char-row">
+          <div class="char-dot zero"></div>
+          <span class="char-code">U+200B</span>
+          <span class="char-name" data-i18n="about_zws"></span>
+        </div>
+        <div class="char-row">
+          <div class="char-dot one"></div>
+          <span class="char-code">U+200C</span>
+          <span class="char-name" data-i18n="about_zwnj"></span>
+        </div>
+        <div class="char-row">
+          <div class="char-dot sep"></div>
+          <span class="char-code">U+200D</span>
+          <span class="char-name" data-i18n="about_zwj"></span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;" data-i18n="about_example"></p>
+      <div class="divider"></div>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.8;" data-i18n="about_footer"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const T = {
+  vi: {
+    subtitle:      'Nhúng chuỗi ẩn vào văn bản bằng ký tự zero-width — vô hình với mắt thường',
+    tab_encode:    'Mã hóa',
+    tab_decode:    'Giải mã',
+    tab_about:     'Cách hoạt động',
+    label_original:'Chuỗi gốc',
+    label_hidden:  'Chuỗi ẩn (zero-width)',
+    label_position:'Vị trí chèn',
+    label_result:  'Kết quả',
+    label_paste:   'Dán chuỗi cần giải mã',
+    label_visible_out: 'Chuỗi hiển thị (đã lọc ZW)',
+    label_hidden_out:  'Chuỗi ẩn được tìm thấy',
+    ph_original:   'Nhập văn bản hiển thị...',
+    ph_hidden:     'Nhập văn bản muốn ẩn...',
+    ph_decode:     'Dán văn bản chứa ký tự zero-width vào đây...',
+    pos_start:     'Đầu chuỗi',
+    pos_end:       'Cuối chuỗi',
+    pos_custom:    'Vị trí tùy chỉnh',
+    pos_after_char:'sau ký tự',
+    btn_encode:    'Tạo chuỗi ẩn',
+    btn_decode:    'Giải mã chuỗi ẩn',
+    btn_copy:      'Sao chép',
+    btn_copied:    '✓ Đã sao chép',
+    result_empty:  'Nhập dữ liệu và nhấn "Tạo chuỗi ẩn"',
+    stat_visible:  'Ký tự hiển thị',
+    stat_hidden:   'Ký tự ẩn',
+    stat_zw:       'Tổng ZW chars',
+    info_banner:   'Kết quả trông <strong>giống hệt</strong> chuỗi gốc nhưng chứa dữ liệu ẩn. Dán vào bất kỳ đâu — chỉ giải mã bằng tab <em>Giải mã</em> mới thấy nội dung ẩn.',
+    decode_empty:  'Chưa có kết quả',
+    decode_none:   'Không tìm thấy ký tự zero-width trong văn bản này',
+    decode_err:    'Tìm thấy ZW chars nhưng không giải mã được — dữ liệu có thể bị lỗi',
+    decode_empty_text: '(trống)',
+    marker_prefix: 'ẩn',
+    about_title:   'Nguyên lý hoạt động',
+    about_intro:   'Mỗi ký tự trong chuỗi ẩn được chuyển thành mã nhị phân (8 bit). Mỗi bit được biểu diễn bằng một ký tự zero-width vô hình:',
+    about_zws:     'Zero Width Space → bit 0',
+    about_zwnj:    'Zero Width Non-Joiner → bit 1',
+    about_zwj:     'Zero Width Joiner → phân cách byte',
+    about_example: '<strong style="color:var(--text);">Ví dụ:</strong> Ký tự <code style="font-family:var(--mono);font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:4px;">A</code> (ASCII 65 = <code style="font-family:var(--mono);font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:4px;">01000001</code>) được mã hóa thành 8 ký tự zero-width, sau đó thêm U+200D làm dấu kết thúc byte.',
+    about_footer:  'Chuỗi kết quả trông <strong style="color:var(--text);">hoàn toàn giống</strong> chuỗi gốc khi hiển thị, nhưng chứa toàn bộ dữ liệu ẩn trong các ký tự không in được. Hỗ trợ đầy đủ <strong style="color:var(--text);">Unicode & tiếng Việt</strong> (mã hóa UTF-8).',
+    zw_title:      'Chuỗi ẩn',
+    zw_chars:      'ký tự ZW',
+  },
+  en: {
+    subtitle:      'Embed hidden strings inside text using zero-width characters — invisible to the naked eye',
+    tab_encode:    'Encode',
+    tab_decode:    'Decode',
+    tab_about:     'How it works',
+    label_original:'Original string',
+    label_hidden:  'Hidden string (zero-width)',
+    label_position:'Insert position',
+    label_result:  'Result',
+    label_paste:   'Paste string to decode',
+    label_visible_out: 'Visible text (ZW stripped)',
+    label_hidden_out:  'Hidden string found',
+    ph_original:   'Enter visible text...',
+    ph_hidden:     'Enter text to hide...',
+    ph_decode:     'Paste text containing zero-width characters here...',
+    pos_start:     'Start of string',
+    pos_end:       'End of string',
+    pos_custom:    'Custom position',
+    pos_after_char:'after char',
+    btn_encode:    'Generate hidden string',
+    btn_decode:    'Decode hidden string',
+    btn_copy:      'Copy',
+    btn_copied:    '✓ Copied',
+    result_empty:  'Enter data and click "Generate hidden string"',
+    stat_visible:  'Visible chars',
+    stat_hidden:   'Hidden chars',
+    stat_zw:       'Total ZW chars',
+    info_banner:   'The result looks <strong>identical</strong> to the original string but contains hidden data. Paste it anywhere — only decoding via the <em>Decode</em> tab reveals the hidden content.',
+    decode_empty:  'No results yet',
+    decode_none:   'No zero-width characters found in this text',
+    decode_err:    'ZW chars found but could not be decoded — data may be corrupted',
+    decode_empty_text: '(empty)',
+    marker_prefix: 'hidden',
+    about_title:   'How it works',
+    about_intro:   'Each character in the hidden string is converted to binary (8 bits). Each bit is represented by an invisible zero-width character:',
+    about_zws:     'Zero Width Space → bit 0',
+    about_zwnj:    'Zero Width Non-Joiner → bit 1',
+    about_zwj:     'Zero Width Joiner → byte separator',
+    about_example: '<strong style="color:var(--text);">Example:</strong> Character <code style="font-family:var(--mono);font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:4px;">A</code> (ASCII 65 = <code style="font-family:var(--mono);font-size:12px;background:var(--surface2);padding:1px 5px;border-radius:4px;">01000001</code>) is encoded as 8 zero-width chars, followed by U+200D as a byte terminator.',
+    about_footer:  'The result looks <strong style="color:var(--text);">completely identical</strong> to the original when displayed, but contains all hidden data in non-printable characters. Fully supports <strong style="color:var(--text);">Unicode & Vietnamese</strong> (UTF-8 encoding).',
+    zw_title:      'Hidden string',
+    zw_chars:      'ZW chars',
+  }
+};
+
+let lang = 'en';
+let currentPos = 'start';
+let encodedResult = '';
+
+const ZW_ZERO = '\u200B';
+const ZW_ONE  = '\u200C';
+const ZW_SEP  = '\u200D';
+
+function t(key) { return T[lang][key] || key; }
+
+function setLang(l) {
+  lang = l;
+  document.getElementById('lang-vi').classList.toggle('active', l === 'vi');
+  document.getElementById('lang-en').classList.toggle('active', l === 'en');
+  document.documentElement.lang = l;
+  applyLang();
+  encode();
+}
+
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val.includes('<')) el.innerHTML = val;
+    else el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+  // Keep result-display empty state text in sync
+  const rd = document.getElementById('result-display');
+  if (rd && rd.classList.contains('empty')) rd.textContent = t('result_empty');
+  // Keep decode-hidden-out empty state in sync
+  const dh = document.getElementById('decode-hidden-out');
+  if (dh && dh.classList.contains('not-found')) dh.textContent = t('decode_empty');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((tb, i) => {
+    tb.classList.toggle('active', ['encode','decode','about'][i] === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+function setPos(p) {
+  currentPos = p;
+  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('pos-custom-input').style.display = p === 'custom' ? 'flex' : 'none';
+  encode();
+}
+
+function encodeString(str) {
+  const bytes = new TextEncoder().encode(str);
+  let result = '';
+  for (const byte of bytes) {
+    for (let i = 7; i >= 0; i--) result += (byte >> i) & 1 ? ZW_ONE : ZW_ZERO;
+    result += ZW_SEP;
+  }
+  return result;
+}
+
+function decodeZWString(zwStr) {
+  const bytes = [];
+  const parts = zwStr.split(ZW_SEP).filter(p => p.length > 0);
+  for (const part of parts) {
+    if (part.length !== 8) continue;
+    let byte = 0;
+    for (let i = 0; i < 8; i++) if (part[i] === ZW_ONE) byte |= (1 << (7 - i));
+    bytes.push(byte);
+  }
+  try { return new TextDecoder('utf-8', {fatal: true}).decode(new Uint8Array(bytes)); }
+  catch { return null; }
+}
+
+function encode() {
+  const orig   = document.getElementById('original').value;
+  const hidden = document.getElementById('hidden').value;
+  if (!orig && !hidden) return;
+
+  const encoded = encodeString(hidden);
+  let result = '';
+  const chars = [...orig];
+
+  if (currentPos === 'start') {
+    result = encoded + orig;
+  } else if (currentPos === 'end') {
+    result = orig + encoded;
+  } else {
+    const pos = Math.min(parseInt(document.getElementById('custom-pos').value) || 0, orig.length);
+    result = orig.slice(0, pos) + encoded + orig.slice(pos);
+  }
+
+  encodedResult = result;
+
+  const display = document.getElementById('result-display');
+  display.classList.remove('empty');
+
+  const markerLabel = `${t('marker_prefix')}: ${escapeHtml(hidden)}`;
+  const markerTitle = `${t('zw_title')}: "${escapeHtml(hidden)}" — ${encoded.length} ${t('zw_chars')}`;
+  const marker = `<span class="zw-marker" title="${markerTitle}">⟨${markerLabel}⟩</span>`;
+
+  let displayHtml = '';
+  if (currentPos === 'start') {
+    displayHtml = marker + escapeHtml(orig);
+  } else if (currentPos === 'end') {
+    displayHtml = escapeHtml(orig) + marker;
+  } else {
+    const pos = Math.min(parseInt(document.getElementById('custom-pos').value) || 0, chars.length);
+    displayHtml = escapeHtml(chars.slice(0, pos).join('')) + marker + escapeHtml(chars.slice(pos).join(''));
+  }
+  display.innerHTML = displayHtml;
+
+  document.getElementById('stat-visible').textContent = chars.length;
+  document.getElementById('stat-hidden').textContent = [...hidden].length;
+  document.getElementById('stat-zw').textContent = encoded.length;
+  document.getElementById('stats-row').style.display = 'flex';
+}
+
+function decode() {
+  const input = document.getElementById('decode-input').value;
+  const visibleOut = document.getElementById('decode-visible-out');
+  const hiddenOut  = document.getElementById('decode-hidden-out');
+
+  const zwChars = new Set([ZW_ZERO, ZW_ONE, ZW_SEP, '\u2060', '\uFEFF', '\u00AD']);
+  let visibleText = '', zwSegment = '';
+
+  for (const ch of input) {
+    if (zwChars.has(ch)) { if (ch === ZW_ZERO || ch === ZW_ONE || ch === ZW_SEP) zwSegment += ch; }
+    else visibleText += ch;
+  }
+
+  visibleOut.textContent = visibleText || t('decode_empty_text');
+
+  if (zwSegment.length === 0) {
+    hiddenOut.className = 'decode-result not-found';
+    hiddenOut.textContent = t('decode_none');
+    return;
+  }
+
+  const decoded = decodeZWString(zwSegment);
+  if (decoded === null || decoded.trim() === '') {
+    hiddenOut.className = 'decode-result error';
+    hiddenOut.textContent = t('decode_err');
+  } else {
+    hiddenOut.className = 'decode-result found';
+    hiddenOut.textContent = decoded;
+  }
+}
+
+function copyToClipboard(text, btn) {
+  if (!text) return;
+  const succeed = () => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = t('btn_copied');
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 1800);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(succeed).catch(() => fallback(text, btn, succeed));
+  } else { fallback(text, btn, succeed); }
+}
+
+function fallback(text, btn, succeed) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); succeed(); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
+function copyResult(type) {
+  if (!encodedResult) return;
+  const btn = document.getElementById(type === 'raw' ? 'copy-raw-btn' : 'copy-visible-btn');
+  copyToClipboard(encodedResult, btn);
+}
+
+function copyText(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const btn = event.target.closest('.action-btn');
+  copyToClipboard(el.textContent, btn);
+}
+
+function copyHiddenText() {
+  const el = document.getElementById('decode-hidden-out');
+  if (!el || el.classList.contains('not-found') || el.classList.contains('error')) return;
+  const btn = event.target.closest('.action-btn');
+  copyToClipboard(el.textContent, btn);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('original').addEventListener('input', encode);
+document.getElementById('hidden').addEventListener('input', encode);
+
+applyLang();
+encode();
+</script>
+</body>
+</html>
