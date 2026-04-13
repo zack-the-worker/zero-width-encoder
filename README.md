@@ -44,7 +44,7 @@ The encoded block is then inserted into the original string at the chosen positi
 
 ### Usage
 
-1. Open `zero-width-encoder.html` in any modern browser — no server required.
+1. Open `index.html` in any modern browser — no server required.
 2. **Encode tab**: enter the visible string and the string to hide, choose an insert position, then click *Generate hidden string*. Copy the result.
 3. **Decode tab**: paste any text into the input, then click *Decode hidden string* to reveal any embedded content.
 4. Use the **VI / EN** toggle in the top-right corner to switch the interface language.
@@ -62,7 +62,7 @@ Works in any modern browser (Chrome, Firefox, Safari, Edge). The clipboard copy 
 ### File structure
 
 ```
-zero-width-encoder.html   # Single-file application (HTML + CSS + JS)
+index.html   # Single-file application (HTML + CSS + JS)
 README.md                 # This file
 ```
 
@@ -110,7 +110,7 @@ Khối mã hóa sau đó được chèn vào chuỗi gốc tại vị trí đã 
 
 ### Hướng dẫn sử dụng
 
-1. Mở `zero-width-encoder.html` trên bất kỳ trình duyệt hiện đại nào — không cần server.
+1. Mở `index.html` trên bất kỳ trình duyệt hiện đại nào — không cần server.
 2. **Tab Mã hóa**: nhập chuỗi hiển thị và chuỗi muốn ẩn, chọn vị trí chèn, rồi nhấn *Tạo chuỗi ẩn*. Sao chép kết quả.
 3. **Tab Giải mã**: dán văn bản vào ô nhập, nhấn *Giải mã chuỗi ẩn* để xem nội dung được nhúng.
 4. Dùng nút **VI / EN** ở góc trên bên phải để chuyển ngôn ngữ giao diện.
@@ -128,7 +128,7 @@ Hoạt động trên mọi trình duyệt hiện đại (Chrome, Firefox, Safari
 ### Cấu trúc file
 
 ```
-zero-width-encoder.html   # Ứng dụng đơn file (HTML + CSS + JS)
+index.html   # Ứng dụng đơn file (HTML + CSS + JS)
 README.md                 # File này
 ```
 
